@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+<!-- PWA / iOS Home Screen -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pack &amp; Go">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#023E8A">
+<meta name="application-name" content="Pack &amp; Go">
+<meta name="description" content="Your smart holiday packing checklist">
+
+<!-- Web App Manifest -->
+<link rel="manifest" href="manifest.json">
+
+<!-- Apple Touch Icons (critical for iOS home screen icon) -->
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+<link rel="apple-touch-icon" sizes="167x167" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+
+<!-- Apple Splash Screens (optional but polished) -->
+<meta name="apple-touch-fullscreen" content="yes">
+
+<title>Pack &amp; Go ✈️</title>
+
+<!-- Fonts: embedded subset so the app works 100% offline -->
+<!-- We load from Google Fonts but the SW will cache them after first load -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* =====================================================
+   PACK & GO — FULL APP STYLES
+   ===================================================== */
+:root {
+  --ocean:  #0077B6;
+  --sky:    #00B4D8;
+  --lagoon: #90E0EF;
+  --sand:   #FFF3B0;
+  --coral:  #FF6B6B;
+  --mango:  #FFB347;
+  --palm:   #2DC653;
+  --white:  #FFFFFF;
+  --dark:   #023E8A;
+  --soft:   #CAF0F8;
+  --shadow: 0 8px 32px rgba(0,119,182,0.18);
+  --radius: 18px;
+  /* Safe area insets for iPhone notch / Dynamic Island */
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(135deg, #0077B6 0%, #00B4D8 40%, #90E0EF 70%, #FFF3B0 100%);
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  /* Respect iPhone notch */
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+}
+
+/* === DECORATIVE === */
+.wave-bg {
+  position: fixed; bottom: 0; left: 0; width: 100%; height: 180px;
+  pointer-events: none; z-index: 0;
+}
+.wave-bg svg { width: 100%; height: 100%; }
+
+.sunburst {
+  position: fixed; top: -120px; right: -80px; width: 340px; height: 340px;
+  background: radial-gradient(circle, rgba(255,179,71,0.35) 0%, transparent 70%);
+  border-radius: 50%; pointer-events: none; z-index: 0;
+  animation: pulse 4s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{transform:scale(1);opacity:.7} 50%{transform:scale(1.1);opacity:1} }
+
+/* === APP SHELL === */
+#app {
+  position: relative; z-index: 1;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* === HEADER === */
+.app-header {
+  background: linear-gradient(135deg, rgba(2,62,138,0.93), rgba(0,119,182,0.87));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 14px 20px 10px;
+  display: flex; flex-direction: column; gap: 8px;
+  border-bottom: 2px solid rgba(144,224,239,0.35);
+  flex-shrink: 0;
+}
+.header-top { display: flex; align-items: center; justify-content: space-between; }
+.app-title {
+  font-family: 'Pacifico', cursive;
+  font-size: 26px; color: var(--sand); letter-spacing: 1px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.trip-info { font-size: 12px; color: var(--lagoon); font-weight: 700; text-align: right; line-height: 1.5; }
+.trip-info span { display: block; }
+
+/* === TAB BAR === */
+.tab-bar { display: flex; gap: 5px; padding: 0 2px; }
+.tab-btn {
+  flex: 1; padding: 8px 4px; border: none; border-radius: 12px;
+  font-family: 'Nunito', -apple-system, sans-serif;
+  font-size: 12px; font-weight: 800; cursor: pointer; transition: all 0.22s;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  white-space: nowrap;
+}
+.tab-btn.active {
+  background: var(--mango); color: var(--dark);
+  box-shadow: 0 4px 14px rgba(255,179,71,0.5); transform: translateY(-1px);
+}
+.tab-btn:not(.active) { background: rgba(255,255,255,0.14); color: var(--lagoon); }
+.badge {
+  background: var(--coral); color: white; border-radius: 20px;
+  padding: 1px 6px; font-size: 10px; min-width: 18px; text-align: center;
+}
+.tab-btn.active .badge { background: var(--dark); }
+
+/* === SCREENS === */
+.screens { flex: 1; overflow: hidden; position: relative; }
+.screen {
+  position: absolute; inset: 0; overflow-y: auto;
+  padding: 12px 12px 90px; display: none;
+  -webkit-overflow-scrolling: touch;
+}
+.screen.active { display: block; }
+
+/* === CARDS === */
+.card {
+  background: rgba(255,255,255,0.93);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-radius: var(--radius); padding: 14px;
+  margin-bottom: 10px; box-shadow: var(--shadow);
+  border: 1.5px solid rgba(144,224,239,0.45);
+}
+.card-title {
+  font-size: 12px; font-weight: 800; color: var(--ocean);
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+}
+
+/* === FORMS === */
+.setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field-group { display: flex; flex-direction: column; gap: 5px; }
+.field-group.full { grid-column: 1/-1; }
+label { font-size: 12px; font-weight: 700; color: var(--ocean); }
+
+input[type="text"], input[type="date"], select {
+  padding: 11px 13px; border-radius: 12px; border: 2px solid var(--lagoon);
+  font-family: 'Nunito', -apple-system, sans-serif;
+  font-size: 15px; font-weight: 600; color: var(--dark);
+  background: rgba(255,255,255,0.95); outline: none; transition: border 0.2s;
+  width: 100%; -webkit-appearance: none; appearance: none;
+}
+input:focus, select:focus { border-color: var(--ocean); }
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%230077B6' d='M6 8L0 0h12z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 30px; }
+
+/* === BUTTONS === */
+.btn {
+  padding: 12px 18px; border: none; border-radius: 12px;
+  font-family: 'Nunito', -apple-system, sans-serif;
+  font-size: 14px; font-weight: 800; cursor: pointer;
+  transition: all 0.18s; -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.btn-primary { background: linear-gradient(135deg, var(--ocean), var(--sky)); color: white; }
+.btn-primary:active { transform: scale(0.96); opacity: 0.9; }
+.btn-coral  { background: var(--coral); color: white; }
+.btn-mango  { background: var(--mango); color: var(--dark); }
+.btn-palm   { background: var(--palm);  color: white; }
+.btn-sm { padding: 8px 13px; font-size: 12px; border-radius: 10px; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* === CATEGORIES === */
+.category-block { margin-bottom: 12px; }
+.category-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+.category-label { font-size: 13px; font-weight: 800; color: var(--dark); display: flex; align-items: center; gap: 5px; }
+
+/* === ITEM ROWS === */
+.item-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 12px; border-radius: 12px; margin-bottom: 6px;
+  background: rgba(144,224,239,0.18); border: 1.5px solid rgba(144,224,239,0.38);
+  transition: all 0.22s; animation: fadeIn 0.28s ease;
+}
+@keyframes fadeIn { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
+.item-row.packed-row { background: rgba(45,198,83,0.11); border-color: rgba(45,198,83,0.32); }
+.item-name { flex: 1; font-size: 15px; font-weight: 700; color: var(--dark); }
+.item-qty { font-size: 12px; color: var(--ocean); font-weight: 700; background: var(--soft); padding: 2px 8px; border-radius: 8px; white-space: nowrap; }
+.item-note { font-size: 11px; color: #666; margin-top: 2px; }
+
+.pack-btn {
+  width: 38px; height: 38px; border-radius: 50%; border: 2.5px solid var(--lagoon);
+  background: white; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; font-size: 17px; transition: all 0.18s; flex-shrink: 0;
+  touch-action: manipulation;
+}
+.pack-btn:active { transform: scale(0.87); }
+.pack-btn.packed { background: var(--palm); border-color: var(--palm); }
+
+.del-btn {
+  width: 32px; height: 32px; border-radius: 50%; border: none;
+  background: rgba(255,107,107,0.13); color: var(--coral); cursor: pointer;
+  font-size: 15px; flex-shrink: 0; transition: all 0.18s;
+  display: flex; align-items: center; justify-content: center;
+  touch-action: manipulation;
+}
+.del-btn:active { background: var(--coral); color: white; }
+
+/* === ADD ITEM FORM === */
+.add-item-form { display: flex; flex-direction: column; gap: 8px; }
+.add-row { display: flex; gap: 8px; }
+.add-row input { flex: 1; }
+.qty-input { width: 72px !important; flex: none !important; text-align: center; }
+
+/* === PROGRESS === */
+.progress-bar-wrap { background: rgba(144,224,239,0.28); border-radius: 20px; height: 14px; overflow: hidden; margin-bottom: 6px; }
+.progress-bar { height: 100%; border-radius: 20px; background: linear-gradient(90deg, var(--palm), var(--mango)); transition: width 0.55s cubic-bezier(.34,1.56,.64,1); }
+.progress-label { font-size: 13px; font-weight: 800; color: var(--dark); text-align: right; }
+
+.section-heading {
+  font-size: 14px; font-weight: 800; color: var(--ocean); margin: 12px 0 8px;
+  display: flex; align-items: center; gap: 6px;
+  padding-bottom: 6px; border-bottom: 2px dashed rgba(0,119,182,0.22);
+}
+
+/* === TRIP CARDS === */
+.trip-card {
+  background: rgba(255,255,255,0.93); border-radius: var(--radius); padding: 14px 15px;
+  margin-bottom: 10px; box-shadow: var(--shadow); border: 1.5px solid rgba(255,179,71,0.38);
+  display: flex; flex-direction: column; gap: 5px; animation: fadeIn 0.28s ease;
+}
+.trip-card-title { font-size: 16px; font-weight: 800; color: var(--dark); }
+.trip-card-meta { font-size: 12px; color: var(--ocean); font-weight: 700; }
+.trip-card-actions { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 5px; }
+
+/* === TOAST === */
+.toast {
+  position: fixed; bottom: calc(90px + var(--safe-bottom)); left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--dark); color: var(--sand); padding: 10px 22px; border-radius: 30px;
+  font-size: 13px; font-weight: 700; opacity: 0; transition: all 0.38s; z-index: 999;
+  pointer-events: none; white-space: nowrap; max-width: 90vw;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* === MODAL === */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(2,62,138,0.72);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  z-index: 200; display: none; align-items: flex-end; justify-content: center;
+  padding: 0 0 var(--safe-bottom);
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: white; border-radius: 24px 24px 0 0; padding: 24px 20px 28px;
+  width: 100%; max-width: 520px; box-shadow: 0 -10px 60px rgba(0,0,0,0.25);
+  animation: slideUp 0.3s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+.modal-title { font-size: 20px; font-weight: 800; color: var(--dark); margin-bottom: 14px; font-family: 'Pacifico', cursive; }
+.modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+.modal-actions .btn { flex: 1; }
+
+/* === CELEBRATE === */
+.celebrate {
+  position: fixed; inset: 0; pointer-events: none; z-index: 300;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.5s;
+}
+.celebrate.show { opacity: 1; }
+.celebrate-text {
+  font-family: 'Pacifico', cursive; font-size: 36px; color: var(--mango);
+  text-shadow: 0 4px 20px rgba(0,0,0,0.4); text-align: center; line-height: 1.4;
+  animation: pop 0.45s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes pop { from{transform:scale(0.4);opacity:0} to{transform:scale(1);opacity:1} }
+
+/* === CONFETTI === */
+.confetti-piece {
+  position: fixed; width: 10px; height: 10px; pointer-events: none; z-index: 290;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  0%   { transform: translateY(-20px) rotate(0deg);   opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+
+/* === EMPTY STATE === */
+.empty-state { text-align: center; padding: 36px 20px; color: rgba(2,62,138,0.45); }
+.empty-state .emoji { font-size: 44px; margin-bottom: 10px; }
+.empty-state p { font-size: 14px; font-weight: 700; }
+
+/* === RECALL BANNER === */
+.recall-banner {
+  background: linear-gradient(135deg, rgba(255,179,71,0.22), rgba(255,107,107,0.12));
+  border: 2px dashed var(--mango); border-radius: 14px; padding: 12px 13px; margin-bottom: 10px;
+}
+.recall-banner p { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 8px; }
+
+/* === CHIPS === */
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chip {
+  padding: 6px 13px; border-radius: 20px; font-size: 12px; font-weight: 800;
+  cursor: pointer; border: 2px solid transparent; transition: all 0.18s;
+  touch-action: manipulation;
+}
+.chip.cat { background: var(--soft); color: var(--ocean); border-color: var(--lagoon); }
+.chip.cat.active { background: var(--ocean); color: white; border-color: var(--ocean); }
+
+/* === INSTALL BANNER === */
+.install-banner {
+  background: linear-gradient(135deg, rgba(45,198,83,0.18), rgba(0,180,216,0.15));
+  border: 2px solid rgba(45,198,83,0.45); border-radius: 14px;
+  padding: 12px 14px; margin-bottom: 10px; display: none;
+}
+.install-banner p { font-size: 13px; font-weight: 700; color: var(--dark); margin-bottom: 6px; }
+.install-banner .steps { font-size: 12px; color: #444; line-height: 1.7; }
+
+/* === OFFLINE INDICATOR === */
+.offline-bar {
+  background: var(--coral); color: white; text-align: center; font-size: 12px;
+  font-weight: 700; padding: 4px; display: none; flex-shrink: 0;
+}
+.offline-bar.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="sunburst"></div>
+<div class="wave-bg">
+  <svg viewBox="0 0 1200 180" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,100 C200,160 400,40 600,100 C800,160 1000,40 1200,100 L1200,180 L0,180 Z" fill="rgba(0,119,182,0.22)"/>
+    <path d="M0,130 C300,80 600,160 900,90 C1050,60 1150,130 1200,140 L1200,180 L0,180 Z" fill="rgba(0,180,216,0.18)"/>
+  </svg>
+</div>
+
+<div id="app">
+  <div class="offline-bar" id="offlineBar">📡 You're offline — app still works!</div>
+
+  <!-- HEADER -->
+  <div class="app-header">
+    <div class="header-top">
+      <div class="app-title">✈️ Pack &amp; Go</div>
+      <div class="trip-info">
+        <span id="tripNameDisplay">No trip set</span>
+        <span id="tripDateDisplay" style="color:var(--sand)"></span>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('setup')" id="tab-setup">🗺️ Setup</button>
+      <button class="tab-btn" onclick="switchTab('build')" id="tab-build">📋 List <span class="badge" id="badge-build">0</span></button>
+      <button class="tab-btn" onclick="switchTab('pack')" id="tab-pack">🧳 Pack <span class="badge" id="badge-pack">0</span></button>
+      <button class="tab-btn" onclick="switchTab('trips')" id="tab-trips">🗄️ Trips</button>
+    </div>
+  </div>
+
+  <!-- SCREENS -->
+  <div class="screens">
+
+    <!-- ── SETUP ── -->
+    <div class="screen active" id="screen-setup">
+
+      <div class="install-banner" id="installBanner">
+        <p>📲 Install Pack &amp; Go as an app on your Home Screen:</p>
+        <div class="steps">
+          1. Tap the <strong>Share</strong> button (□↑) at the bottom of Safari<br>
+          2. Scroll down and tap <strong>"Add to Home Screen"</strong><br>
+          3. Tap <strong>Add</strong> — done! Opens full-screen like a native app.
+        </div>
+      </div>
+
+      <div class="recall-banner" id="recallBanner" style="display:none">
+        <p>📦 Load a previous trip's packing list:</p>
+        <div class="btn-row">
+          <select id="recallSelect" style="flex:1;font-size:13px"></select>
+          <button class="btn btn-mango btn-sm" onclick="recallTrip()">Load</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🌴 Trip Details</div>
+        <div class="setup-grid">
+          <div class="field-group full">
+            <label>Trip Name / Destination</label>
+            <input type="text" id="tripName" placeholder="e.g. Bali 2026 ✨" maxlength="50" autocomplete="off">
+          </div>
+          <div class="field-group">
+            <label>Departure</label>
+            <input type="date" id="tripDate">
+          </div>
+          <div class="field-group">
+            <label>Return</label>
+            <input type="date" id="tripReturn">
+          </div>
+          <div class="field-group full">
+            <label>Destination Type</label>
+            <select id="destType">
+              <option value="">Select type…</option>
+              <option value="beach">🏖️ Beach / Tropical</option>
+              <option value="city">🏙️ City Break</option>
+              <option value="mountain">⛰️ Mountain / Hiking</option>
+              <option value="ski">⛷️ Ski / Winter</option>
+              <option value="cruise">🚢 Cruise</option>
+              <option value="camping">⛺ Camping</option>
+              <option value="business">💼 Business Travel</option>
+            </select>
+          </div>
+          <div class="field-group full">
+            <label>Notes</label>
+            <input type="text" id="tripNotes" placeholder="Optional notes…" autocomplete="off">
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:14px">
+          <button class="btn btn-primary" style="flex:1" onclick="saveTrip()">💾 Save &amp; Go to Build List →</button>
+        </div>
+        <div style="margin-top:8px">
+          <button class="btn btn-mango btn-sm" onclick="loadSuggestedItems()">✨ Auto-suggest items for this destination</button>
+        </div>
+      </div>
+
+      <div class="card" id="suggestCard" style="display:none">
+        <div class="card-title">✨ Suggested Items</div>
+        <p style="font-size:13px;color:#555;margin-bottom:10px">Tap items to select, then add them:</p>
+        <div id="suggestList"></div>
+        <div class="btn-row" style="margin-top:10px">
+          <button class="btn btn-palm btn-sm" onclick="addSelectedSuggestions()">➕ Add Selected to List</button>
+          <button class="btn btn-sm" style="background:#eee;color:#555" onclick="document.getElementById('suggestCard').style.display='none'">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BUILD LIST ── -->
+    <div class="screen" id="screen-build">
+      <div class="card">
+        <div class="card-title">➕ Add Item</div>
+        <div class="add-item-form">
+          <div class="add-row">
+            <input type="text" id="newItemName" placeholder="Item name…" autocomplete="off" onkeydown="if(event.key==='Enter')addItem()">
+            <input type="text" id="newItemQty" class="qty-input" placeholder="Qty" autocomplete="off">
+          </div>
+          <div class="add-row">
+            <input type="text" id="newItemNote" placeholder="Note (optional)…" style="flex:1" autocomplete="off">
+            <select id="newItemCat" style="width:140px;flex:none">
+              <option value="General">📦 General</option>
+              <option value="Clothing">👕 Clothing</option>
+              <option value="Toiletries">🧴 Toiletries</option>
+              <option value="Electronics">🔌 Electronics</option>
+              <option value="Documents">📄 Documents</option>
+              <option value="Health">💊 Health</option>
+              <option value="Beach">🏖️ Beach</option>
+              <option value="Food">🍎 Food &amp; Drink</option>
+              <option value="Entertainment">🎮 Entertainment</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="addItem()">➕ Add to List</button>
+        </div>
+      </div>
+
+      <div id="buildList"></div>
+
+      <div class="card">
+        <div class="btn-row">
+          <button class="btn btn-coral btn-sm" onclick="clearAll()">🗑️ Clear All</button>
+          <button class="btn btn-palm" style="flex:1" onclick="switchTab('pack')">🧳 Start Packing →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PACK ── -->
+    <div class="screen" id="screen-pack">
+      <div class="card">
+        <div class="card-title">🧳 Packing Progress</div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+        <div class="progress-label" id="progressLabel">0 / 0 packed</div>
+      </div>
+
+      <div id="toPackSection">
+        <div class="section-heading">⏳ Still To Pack</div>
+        <div id="toPackList"></div>
+      </div>
+
+      <div id="packedSection" style="display:none">
+        <div class="section-heading">✅ Packed</div>
+        <div id="packedList"></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <button class="btn btn-coral btn-sm" onclick="resetPacking()">↩️ Reset All to Unpacked</button>
+      </div>
+    </div>
+
+    <!-- ── TRIPS ── -->
+    <div class="screen" id="screen-trips">
+      <div class="card">
+        <div class="card-title">🗄️ Saved Trips</div>
+        <p style="font-size:13px;color:#555;margin-bottom:10px">Your trip library. Load any trip as a template for a new holiday.</p>
+        <button class="btn btn-palm btn-sm" onclick="saveCurrentTripToLibrary()">💾 Save Current List to Library</button>
+      </div>
+      <div id="tripsList"></div>
+    </div>
+
+  </div><!-- /screens -->
+</div><!-- /app -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Celebrate -->
+<div class="celebrate" id="celebrate">
+  <div class="celebrate-text">🎉 All Packed!<br>Bon Voyage! ✈️</div>
+</div>
+
+<!-- Modal: Save -->
+<div class="modal-overlay" id="saveModal" onclick="if(event.target===this)closeModal('saveModal')">
+  <div class="modal-box">
+    <div class="modal-title">💾 Save Trip</div>
+    <p style="font-size:14px;color:#555;margin-bottom:12px">Save this packing list to your library for future reuse.</p>
+    <div class="field-group">
+      <label>Save As</label>
+      <input type="text" id="saveTripName" placeholder="e.g. Bali Beach Template" autocomplete="off">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" style="background:#eee;color:#555" onclick="closeModal('saveModal')">Cancel</button>
+      <button class="btn btn-palm" onclick="confirmSaveTrip()">✅ Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Delete -->
+<div class="modal-overlay" id="deleteModal" onclick="if(event.target===this)closeModal('deleteModal')">
+  <div class="modal-box">
+    <div class="modal-title">🗑️ Delete Trip?</div>
+    <p style="font-size:14px;color:#555;margin-bottom:12px" id="deleteModalMsg">Are you sure?</p>
+    <div class="modal-actions">
+      <button class="btn" style="background:#eee;color:#555" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn btn-coral" onclick="confirmDeleteTrip()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================
+   PACK & GO — APP LOGIC
+   ===================================================== */
+
+// ── STATE ──────────────────────────────────────────
+let state = {
+  currentTrip: { name:'', date:'', returnDate:'', type:'', notes:'' },
+  items: [],
+  savedTrips: [],
+  activeTab: 'setup',
+  _celebrated: false
+};
+let pendingDeleteId = null;
+
+// ── SUGGESTIONS ────────────────────────────────────
+const SUGGESTIONS = {
+  beach:{
+    Clothing:['Swimsuit','Shorts','Sundress','Flip flops','Sun hat','Light jacket','Cover-up','Beach towel'],
+    Toiletries:['Sunscreen SPF50','After-sun lotion','Insect repellent','Shampoo','Conditioner','Razor'],
+    Beach:['Snorkel set','Beach bag','Waterproof phone case','Goggles','Sand toys','Sarong'],
+    Documents:['Passport','Travel insurance','Flight tickets','Hotel booking','Emergency contacts'],
+    Health:['Antihistamines','Paracetamol','Plasters','Rehydration sachets'],
+    Electronics:['Phone charger','Power bank','Camera','Adaptor plug','Headphones']
+  },
+  city:{
+    Clothing:['Smart casual tops','Trousers','Comfortable walking shoes','Light rain jacket','Scarf'],
+    Documents:['Passport','City maps','Hotel booking','Travel insurance'],
+    Electronics:['Phone charger','Power bank','Camera','Adaptor plug'],
+    General:['Day bag/backpack','Reusable water bottle','Umbrella','Travel guide book']
+  },
+  mountain:{
+    Clothing:['Hiking boots','Waterproof jacket','Thermal base layer','Fleece','Walking socks x5','Gloves'],
+    Health:['First aid kit','Blister pads','Sunscreen','Lip balm SPF'],
+    General:['Trekking poles','Torch/headlamp','Map & compass','Emergency whistle','Rucksack'],
+    Electronics:['GPS device','Power bank','Camera']
+  },
+  ski:{
+    Clothing:['Ski jacket','Ski trousers','Thermal base layers','Ski socks x5','Gloves','Goggles','Ski helmet','Neck gaiter'],
+    Toiletries:['High SPF sunscreen','Lip balm SPF','Moisturiser'],
+    General:['Ski pass','Ski hire documents','Locker padlock'],
+    Health:['Paracetamol','Ibuprofen','Plasters']
+  },
+  cruise:{
+    Clothing:['Formal dinner outfit','Smart casual wear','Swimsuit','Sun hat','Light layers'],
+    Documents:['Passport','Cruise boarding pass','Travel insurance','Shore excursion bookings'],
+    General:['Seasickness tablets','Formal shoes','Evening bag','Sunglasses'],
+    Electronics:['Phone charger','Camera','Power bank']
+  },
+  camping:{
+    General:['Tent','Sleeping bag','Sleeping mat','Torch','Matches/lighter','Multi-tool'],
+    Clothing:['Waterproof jacket','Warm fleece','Walking boots','Wool socks x5'],
+    Food:['Camp stove','Cooking pot','Utensils','Food supplies','Water filter'],
+    Health:['First aid kit','Insect repellent','Sun cream']
+  },
+  business:{
+    Clothing:['Business shirts x3','Suit','Tie','Smart shoes','Casual clothes for evenings'],
+    Documents:['Passport','Business cards','Laptop','Charger','Presentation materials'],
+    Electronics:['Phone charger','Laptop charger','Adaptor','Headphones'],
+    General:['Notebook','Pens','Toiletry bag']
+  }
+};
+
+const CAT_EMOJI = {General:'📦',Clothing:'👕',Toiletries:'🧴',Electronics:'🔌',Documents:'📄',Health:'💊',Beach:'🏖️',Food:'🍎',Entertainment:'🎮'};
+
+// ── INIT ──────────────────────────────────────────
+function init() {
+  // Load saved state
+  try {
+    const s = localStorage.getItem('packAndGoState');
+    if (s) state = {...state, ...JSON.parse(s)};
+  } catch(e) {}
+
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      console.log('SW registered:', reg.scope);
+    }).catch(e => console.log('SW error:', e));
+  }
+
+  // Offline/online indicator
+  function setOnline(on) {
+    document.getElementById('offlineBar').classList.toggle('show', !on);
+  }
+  window.addEventListener('online',  () => setOnline(true));
+  window.addEventListener('offline', () => setOnline(false));
+  setOnline(navigator.onLine);
+
+  // Show install banner only in Safari browser (not already installed as PWA)
+  const isStandalone = window.navigator.standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches;
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  if (!isStandalone && isSafari) {
+    document.getElementById('installBanner').style.display = 'block';
+  }
+
+  updateAll();
+}
+
+function save() {
+  try { localStorage.setItem('packAndGoState', JSON.stringify(state)); } catch(e) {}
+}
+
+// ── TABS ──────────────────────────────────────────
+function switchTab(tab) {
+  state.activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('screen-' + tab).classList.add('active');
+  if (tab === 'build')  renderBuild();
+  if (tab === 'pack')   renderPack();
+  if (tab === 'trips')  renderTrips();
+  if (tab === 'setup')  renderSetup();
+  updateBadges();
+}
+
+// ── SETUP ─────────────────────────────────────────
+function renderSetup() {
+  document.getElementById('tripName').value   = state.currentTrip.name || '';
+  document.getElementById('tripDate').value   = state.currentTrip.date || '';
+  document.getElementById('tripReturn').value = state.currentTrip.returnDate || '';
+  document.getElementById('destType').value   = state.currentTrip.type || '';
+  document.getElementById('tripNotes').value  = state.currentTrip.notes || '';
+  updateTripHeader();
+
+  const banner = document.getElementById('recallBanner');
+  if (state.savedTrips.length > 0) {
+    banner.style.display = 'block';
+    document.getElementById('recallSelect').innerHTML =
+      state.savedTrips.map((t,i) => `<option value="${i}">${h(t.name)} — ${t.date||'no date'}</option>`).join('');
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function saveTrip() {
+  const name = document.getElementById('tripName').value.trim();
+  if (!name) { showToast('Please enter a trip name 🌴'); return; }
+  state.currentTrip = {
+    name,
+    date:        document.getElementById('tripDate').value,
+    returnDate:  document.getElementById('tripReturn').value,
+    type:        document.getElementById('destType').value,
+    notes:       document.getElementById('tripNotes').value.trim()
+  };
+  save(); updateTripHeader();
+  showToast('Trip saved! ✈️');
+  setTimeout(() => switchTab('build'), 550);
+}
+
+function updateTripHeader() {
+  document.getElementById('tripNameDisplay').textContent = state.currentTrip.name || 'No trip set';
+  document.getElementById('tripDateDisplay').textContent = state.currentTrip.date ? '📅 ' + fmtDate(state.currentTrip.date) : '';
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+}
+
+function loadSuggestedItems() {
+  const type = document.getElementById('destType').value;
+  if (!type) { showToast('Select a destination type first!'); return; }
+  const suggs = SUGGESTIONS[type] || {};
+  let html = '';
+  for (const [cat, items] of Object.entries(suggs)) {
+    html += `<div style="margin-bottom:10px">
+      <div style="font-size:12px;font-weight:800;color:var(--ocean);margin-bottom:6px">${CAT_EMOJI[cat]||'📦'} ${cat}</div>
+      <div class="chip-row">`;
+    items.forEach(item => {
+      html += `<div class="chip cat" onclick="this.classList.toggle('active')" data-item="${h(item)}" data-cat="${cat}">${h(item)}</div>`;
+    });
+    html += `</div></div>`;
+  }
+  document.getElementById('suggestList').innerHTML = html;
+  document.getElementById('suggestCard').style.display = 'block';
+}
+
+function addSelectedSuggestions() {
+  let added = 0;
+  document.querySelectorAll('#suggestList .chip.active').forEach(chip => {
+    const name = chip.dataset.item, cat = chip.dataset.cat;
+    if (!state.items.find(i => i.name.toLowerCase() === name.toLowerCase())) {
+      state.items.push({id: uid(), name, qty:'1', note:'', category:cat, packed:false});
+      added++;
+    }
+  });
+  save(); showToast(`Added ${added} item${added!==1?'s':''}! 🎉`);
+  document.getElementById('suggestCard').style.display = 'none';
+  updateBadges();
+}
+
+function recallTrip() {
+  const idx = parseInt(document.getElementById('recallSelect').value);
+  const trip = state.savedTrips[idx];
+  if (!trip) return;
+  state.items = trip.items.map(i => ({...i, packed:false, id:uid()}));
+  state.currentTrip = {...trip, name: trip.name + ' (Copy)'};
+  document.getElementById('tripName').value = state.currentTrip.name;
+  save(); showToast(`Loaded "${trip.name}" ✈️`); updateAll();
+}
+
+// ── BUILD ─────────────────────────────────────────
+function renderBuild() {
+  const container = document.getElementById('buildList');
+  if (!state.items.length) {
+    container.innerHTML = `<div class="empty-state"><div class="emoji">📋</div><p>Your list is empty.<br>Add items above!</p></div>`;
+    return;
+  }
+  const byCat = {};
+  state.items.forEach(item => { (byCat[item.category] = byCat[item.category]||[]).push(item); });
+  let html = '';
+  for (const [cat, items] of Object.entries(byCat)) {
+    html += `<div class="category-block">
+      <div class="category-header">
+        <div class="category-label">${CAT_EMOJI[cat]||'📦'} ${cat}</div>
+        <span style="font-size:11px;color:var(--ocean);font-weight:700">${items.length} item${items.length>1?'s':''}</span>
+      </div>`;
+    items.forEach(item => {
+      html += `<div class="item-row">
+        <div style="flex:1">
+          <div class="item-name">${h(item.name)}</div>
+          ${item.note ? `<div class="item-note">${h(item.note)}</div>` : ''}
+        </div>
+        ${item.qty ? `<div class="item-qty">×${h(item.qty)}</div>` : ''}
+        <button class="del-btn" onclick="removeItem('${item.id}')">✕</button>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  container.innerHTML = html;
+}
+
+function addItem() {
+  const name = document.getElementById('newItemName').value.trim();
+  if (!name) { showToast('Enter an item name!'); return; }
+  state.items.push({
+    id: uid(), name,
+    qty:      document.getElementById('newItemQty').value.trim(),
+    note:     document.getElementById('newItemNote').value.trim(),
+    category: document.getElementById('newItemCat').value,
+    packed: false
+  });
+  document.getElementById('newItemName').value = '';
+  document.getElementById('newItemQty').value  = '';
+  document.getElementById('newItemNote').value = '';
+  document.getElementById('newItemName').focus();
+  save(); renderBuild(); updateBadges();
+  showToast('Added! ✅');
+}
+
+function removeItem(id) {
+  state.items = state.items.filter(i => i.id != id);
+  save(); renderBuild(); updateBadges();
+}
+
+function clearAll() {
+  if (!confirm('Clear all items from the list?')) return;
+  state.items = []; save(); renderBuild(); updateBadges();
+}
+
+// ── PACK ──────────────────────────────────────────
+function renderPack() {
+  const unpacked = state.items.filter(i => !i.packed);
+  const packed   = state.items.filter(i =>  i.packed);
+  const total    = state.items.length;
+  const pct      = total ? Math.round(packed.length / total * 100) : 0;
+
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${packed.length} / ${total} packed (${pct}%)`;
+
+  // To-pack section
+  const toPackDiv = document.getElementById('toPackList');
+  if (!unpacked.length && total > 0) {
+    toPackDiv.innerHTML = `<div class="empty-state"><div class="emoji">🎉</div><p>Everything is packed!</p></div>`;
+    document.getElementById('packedSection').style.display = 'block';
+    if (!state._celebrated) { launchConfetti(); state._celebrated = true; save(); }
+  } else {
+    state._celebrated = false;
+    const byCat = {};
+    unpacked.forEach(i => (byCat[i.category] = byCat[i.category]||[]).push(i));
+    let html = '';
+    for (const [cat, items] of Object.entries(byCat)) {
+      html += `<div style="font-size:12px;font-weight:800;color:var(--ocean);padding:4px 2px">${CAT_EMOJI[cat]||'📦'} ${cat}</div>`;
+      items.forEach(item => {
+        html += `<div class="item-row">
+          <button class="pack-btn" onclick="togglePack('${item.id}')">📦</button>
+          <div style="flex:1">
+            <div class="item-name">${h(item.name)}</div>
+            ${item.note ? `<div class="item-note">${h(item.note)}</div>` : ''}
+          </div>
+          ${item.qty ? `<div class="item-qty">×${h(item.qty)}</div>` : ''}
+        </div>`;
+      });
+    }
+    toPackDiv.innerHTML = html || `<div class="empty-state"><div class="emoji">📋</div><p>No items yet.<br>Build your list first!</p></div>`;
+    document.getElementById('packedSection').style.display = packed.length ? 'block' : 'none';
+  }
+
+  // Packed section
+  if (packed.length) {
+    document.getElementById('packedSection').style.display = 'block';
+    document.getElementById('packedList').innerHTML = packed.map(item => `
+      <div class="item-row packed-row">
+        <button class="pack-btn packed" onclick="togglePack('${item.id}')">✅</button>
+        <div style="flex:1">
+          <div class="item-name" style="text-decoration:line-through;color:#999">${h(item.name)}</div>
+        </div>
+        ${item.qty ? `<div class="item-qty">×${h(item.qty)}</div>` : ''}
+      </div>`).join('');
+  }
+  updateBadges();
+}
+
+function togglePack(id) {
+  const item = state.items.find(i => i.id == id);
+  if (!item) return;
+  item.packed = !item.packed;
+  save(); renderPack();
+  if (item.packed) showToast(`✅ ${item.name} packed!`);
+}
+
+function resetPacking() {
+  state.items.forEach(i => i.packed = false);
+  state._celebrated = false;
+  save(); renderPack(); showToast('All reset ↩️');
+}
+
+// ── TRIPS ─────────────────────────────────────────
+function renderTrips() {
+  const c = document.getElementById('tripsList');
+  if (!state.savedTrips.length) {
+    c.innerHTML = `<div class="empty-state"><div class="emoji">🗺️</div><p>No saved trips yet.<br>Build a list and save it!</p></div>`;
+    return;
+  }
+  c.innerHTML = state.savedTrips.map((trip, idx) => `
+    <div class="trip-card">
+      <div class="trip-card-title">${h(trip.name)}</div>
+      <div class="trip-card-meta">
+        ${trip.date ? '📅 ' + fmtDate(trip.date) : ''}
+        ${trip.returnDate ? ' → ' + fmtDate(trip.returnDate) : ''}
+        • ${trip.items.length} items
+        ${trip.type ? ' • ' + trip.type : ''}
+      </div>
+      ${trip.notes ? `<div style="font-size:11px;color:#777">📝 ${h(trip.notes)}</div>` : ''}
+      <div class="trip-card-actions">
+        <button class="btn btn-primary btn-sm" onclick="loadTripAsCurrent(${idx})">✈️ Load</button>
+        <button class="btn btn-mango btn-sm"   onclick="cloneTrip(${idx})">📋 Clone</button>
+        <button class="btn btn-coral btn-sm"   onclick="promptDeleteTrip(${idx})">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+function saveCurrentTripToLibrary() {
+  if (!state.currentTrip.name) { showToast('Set up a trip first!'); return; }
+  document.getElementById('saveTripName').value = state.currentTrip.name;
+  document.getElementById('saveModal').classList.add('open');
+}
+
+function confirmSaveTrip() {
+  const name = document.getElementById('saveTripName').value.trim();
+  if (!name) { showToast('Enter a name!'); return; }
+  const idx = state.savedTrips.findIndex(t => t.name === name);
+  const data = {...state.currentTrip, name, items: state.items.map(i=>({...i,packed:false}))};
+  if (idx >= 0) state.savedTrips[idx] = data; else state.savedTrips.push(data);
+  save(); closeModal('saveModal'); renderTrips();
+  showToast(`"${name}" saved! 🗄️`);
+}
+
+function loadTripAsCurrent(idx) {
+  const t = state.savedTrips[idx];
+  state.currentTrip = {name:t.name, date:t.date, returnDate:t.returnDate, type:t.type, notes:t.notes};
+  state.items = t.items.map(i=>({...i,packed:false,id:uid()}));
+  save(); updateAll(); showToast(`Loaded "${t.name}" ✈️`);
+  switchTab('pack');
+}
+
+function cloneTrip(idx) {
+  const t = state.savedTrips[idx];
+  state.currentTrip = {...t, name: t.name + ' (Copy)'};
+  state.items = t.items.map(i=>({...i,packed:false,id:uid()}));
+  save(); updateAll();
+  switchTab('setup'); showToast('Cloned — edit & save 📋');
+}
+
+function promptDeleteTrip(idx) {
+  pendingDeleteId = idx;
+  document.getElementById('deleteModalMsg').textContent = `Delete "${state.savedTrips[idx].name}"? This cannot be undone.`;
+  document.getElementById('deleteModal').classList.add('open');
+}
+
+function confirmDeleteTrip() {
+  if (pendingDeleteId !== null) {
+    state.savedTrips.splice(pendingDeleteId, 1);
+    save(); renderTrips(); closeModal('deleteModal');
+    showToast('Trip deleted 🗑️'); pendingDeleteId = null;
+  }
+}
+
+// ── CONFETTI ──────────────────────────────────────
+function launchConfetti() {
+  const el = document.getElementById('celebrate');
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3500);
+  const colours = ['#FF6B6B','#FFB347','#2DC653','#00B4D8','#FFF3B0','#FF85A1'];
+  for (let i = 0; i < 60; i++) {
+    setTimeout(() => {
+      const c = document.createElement('div');
+      c.className = 'confetti-piece';
+      c.style.cssText = `
+        left:${Math.random()*100}vw;
+        top:-20px;
+        background:${colours[Math.floor(Math.random()*colours.length)]};
+        width:${6+Math.random()*10}px;
+        height:${6+Math.random()*10}px;
+        border-radius:${Math.random()>0.5?'50%':'2px'};
+        animation-duration:${2+Math.random()*2}s;
+        animation-delay:${Math.random()*0.5}s;
+      `;
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 4000);
+    }, i * 30);
+  }
+}
+
+// ── HELPERS ───────────────────────────────────────
+function updateAll() { updateTripHeader(); updateBadges(); renderSetup(); }
+
+function updateBadges() {
+  const unpacked = state.items.filter(i => !i.packed).length;
+  document.getElementById('badge-build').textContent = state.items.length;
+  document.getElementById('badge-pack').textContent  = unpacked;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function h(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+// ── BOOT ──────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
